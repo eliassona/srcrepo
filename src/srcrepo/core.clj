@@ -1,7 +1,8 @@
 (ns srcrepo.core
   (:import [java.security MessageDigest]
            [java.io FileInputStream File]
-           [redis.clients.jedis Jedis]))
+           [redis.clients.jedis Jedis]
+           [srcrepo Codec]))
 
 (defmacro dbg [body]
   `(let [x# ~body]
@@ -21,7 +22,7 @@
   (apply str (map (partial format "%02x") ba)))
 
 (defn add-file-to-repo [src-file bin-files]
-   (let [k (ba->ba-str (.digest sha-256 (file-name->ba src-file)))]
+   (let [k (.digest sha-256 (file-name->ba src-file))]
      {k (map file-name->ba bin-files)}))
 
 (defn files-of [dir ext]
@@ -54,11 +55,27 @@
   (apply merge (map (fn [[src-file bin-files]] (add-file-to-repo src-file bin-files)) (pair-src-bin-files src bin)))
   )
 
+(def jedis (Jedis. "localhost" 6379)) 
+
+(defn encode-ba [byte-arrays]
+  (let [ba (byte-array (+ 1 
+                          (* (count byte-arrays) 4)
+                          (reduce + (map count byte-arrays))))]
+    (aset-byte ba 0 (count byte-arrays))
+    
+  ))
+
+(defn add-dir-to-redis! [src bin]
+  (doseq [[k v] (add-dir-to-repo src bin)]
+    (.set jedis k (Codec/encodeBA v))
+    (println (.get jedis k))
+    ))
+
 
 (comment 
   (first 
      (add-dir-to-repo 
        [(File. "/Users/anderseliasson/src/mz8/mz-main/mediationzone/packages/ultra/src/external/java") "java"]
        [(File. "/Users/anderseliasson/src/mz8/mz-main/mediationzone/packages/ultra/build/classes/java/external") "class"]
-       {}))
+       ))
   )
