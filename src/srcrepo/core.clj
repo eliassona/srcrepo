@@ -1,6 +1,7 @@
 (ns srcrepo.core
   (:import [java.security MessageDigest]
-           [java.io FileInputStream File]))
+           [java.io FileInputStream File]
+           [redis.clients.jedis Jedis]))
 
 (defmacro dbg [body]
   `(let [x# ~body]
@@ -19,17 +20,16 @@
 (defn ba->ba-str [ba]
   (apply str (map (partial format "%02x") ba)))
 
-(defn add-file-to-repo [src-file bin-files the-map]
+(defn add-file-to-repo [src-file bin-files]
    (let [k (ba->ba-str (.digest sha-256 (file-name->ba src-file)))]
-     (contains? the-map k)
-     (assoc the-map k (map file-name->ba bin-files))))
+     {k (map file-name->ba bin-files)}))
 
 (defn files-of [dir ext]
   (let [ext (format ".%s" ext)]
     (filter (fn [path] (.endsWith (.getName path) ext)) (file-seq (clojure.java.io/file dir)))))
 
 (defn relative-path-of [root-dir file]
-  (.substring (.getAbsolutePath file) (inc (count (.getAbsolutePath root-dir)))))
+  (.substring (.getAbsolutePath file) (-> root-dir .getAbsolutePath count inc)))
 
 (defn pair-src-file [src-dir bin-dir bin-files]
   (let [relative-bin-files (map (partial relative-path-of bin-dir) bin-files)]
@@ -50,13 +50,15 @@
   ))
 
 
-(defn add-dir-to-repo [src bin the-map]
-  (map (fn [[src-file bin-files]] (add-file-to-repo src-file bin-files the-map)) (pair-src-bin-files src bin))
+(defn add-dir-to-repo [src bin]
+  (apply merge (map (fn [[src-file bin-files]] (add-file-to-repo src-file bin-files)) (pair-src-bin-files src bin)))
   )
 
 
 (comment 
-  (pair-src-bin-files 
-  (File. "/Users/anderseliasson/src/mz8/mz-main/mediationzone/packages/ultra/src")
-  (File. "/Users/anderseliasson/src/mz8/mz-main/mediationzone/packages/ultra/build/classes"))
+  (first 
+     (add-dir-to-repo 
+       [(File. "/Users/anderseliasson/src/mz8/mz-main/mediationzone/packages/ultra/src/external/java") "java"]
+       [(File. "/Users/anderseliasson/src/mz8/mz-main/mediationzone/packages/ultra/build/classes/java/external") "class"]
+       {}))
   )
