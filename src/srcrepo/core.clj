@@ -13,6 +13,7 @@
 
 
 (defn file-name->ba [file-name]
+  (dbg (class file-name))
   (let [in-stream (FileInputStream. file-name)
         ba (byte-array (.available in-stream))
         _ (.read in-stream ba)]
@@ -21,9 +22,12 @@
 (defn ba->ba-str [ba]
   (apply str (map (partial format "%02x") ba)))
 
+(defn file->sha-256 [file]
+  (.digest sha-256 (file-name->ba file)))
+
 (defn add-file-to-repo [src-file bin-files]
-   (let [k (.digest sha-256 (file-name->ba src-file))]
-     {k (map file-name->ba bin-files)}))
+   (let [k (file->sha-256 src-file)]
+     {k (map (fn [f] [(.getName f) (file-name->ba f)]) bin-files)}))
 
 (defn files-of [dir ext]
   (let [ext (format ".%s" ext)]
@@ -57,25 +61,31 @@
 
 (def jedis (Jedis. "localhost" 6379)) 
 
-(defn encode-ba [byte-arrays]
-  (let [ba (byte-array (+ 1 
-                          (* (count byte-arrays) 4)
-                          (reduce + (map count byte-arrays))))]
-    (aset-byte ba 0 (count byte-arrays))
-    
-  ))
-
 (defn add-dir-to-redis! [src bin]
   (doseq [[k v] (add-dir-to-repo src bin)]
-    (.set jedis k (Codec/encodeBA v))
-    (println (.get jedis k))
-    ))
+    (.set jedis k (Codec/encodeBA v))))
 
-
-(comment 
-  (first 
-     (add-dir-to-repo 
-       [(File. "/Users/anderseliasson/src/mz8/mz-main/mediationzone/packages/ultra/src/external/java") "java"]
-       [(File. "/Users/anderseliasson/src/mz8/mz-main/mediationzone/packages/ultra/build/classes/java/external") "class"]
-       ))
+(defn init-bin! [[src-dir src-ext] [bin-src bin-ext]]
+  (let [sha-256s (map file->sha-256 (files-of src-dir src-ext))]
+    sha-256s
+    )
   )
+
+
+
+(def ultra-project 
+  [[[(File. "/Users/anderseliasson/src/mz8/mz-main/mediationzone/packages/ultra/src/external/java") "java"]
+    [(File. "/Users/anderseliasson/src/mz8/mz-main/mediationzone/packages/ultra/build/classes/java/external") "class"]]
+  [[(File. "/Users/anderseliasson/src/mz8/mz-main/mediationzone/packages/ultra/src/devkit/java") "java"]
+   [(File. "/Users/anderseliasson/src/mz8/mz-main/mediationzone/packages/ultra/build/classes/java/devkit") "class"]]
+   [[(File. "/Users/anderseliasson/src/mz8/mz-main/mediationzone/packages/ultra/src/server/java") "java"]
+    [(File. "/Users/anderseliasson/src/mz8/mz-main/mediationzone/packages/ultra/build/classes/java/server") "class"]]
+   [[(File. "/Users/anderseliasson/src/mz8/mz-main/mediationzone/packages/ultra/src/testsupport/java") "java"]
+    [(File. "/Users/anderseliasson/src/mz8/mz-main/mediationzone/packages/ultra/build/classes/java/testsupport") "class"]]])
+  
+
+  (defn add! [] 
+    (doseq [[src bin] ultra-project]
+      (add-dir-to-redis! src bin)))
+
+
