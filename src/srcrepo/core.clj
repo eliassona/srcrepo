@@ -67,7 +67,7 @@
 
 (defn init-bin! [[src-dir src-ext] [bin-src bin-ext]]
   (let [sha-256s (map file->sha-256 (files-of src-dir src-ext))]
-    sha-256s
+    (map #(.get jedis %) sha-256s)
     )
   )
 

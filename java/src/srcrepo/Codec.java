@@ -1,19 +1,30 @@
 package srcrepo;
 
+import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class Codec {
-	public static byte[] encodeBA(final List<List> byteArrays) {
+	public static byte[] encodeBA(final List<List> byteArrays) throws UnsupportedEncodingException {
 		int sizeOfData = 0;
 		for (final List l: byteArrays) {
+			final String name = (String) l.get(0);
+			sizeOfData += 1 + name.getBytes(StandardCharsets.UTF_8).length;
 			final byte[] b = (byte[]) l.get(1);
-			sizeOfData += b.length;
+			sizeOfData += 4 + b.length;
 		}
-		final byte ba[] = new byte[1 + byteArrays.size() * 4 + sizeOfData];
+		final byte ba[] = new byte[1 + sizeOfData];
 		ba[0] = (byte) byteArrays.size();
 		int i = 1;
 		for (final List l: byteArrays) {
+			final String name = (String) l.get(0);
+			final byte[] nameBa = name.getBytes(StandardCharsets.UTF_8);
+			ba[i] = (byte) nameBa.length;
+			i++;
+			System.arraycopy(nameBa, 0, ba, i, nameBa.length);
+			i += nameBa.length;
 			final byte[] b = (byte[]) l.get(1);
 			encodeBaSize(b.length, i, ba);
 			i += 4;
@@ -34,25 +45,33 @@ public class Codec {
 		return ba[i] | ba[i + 1] << 8 | ba[i + 2] << 16 | ba[i + 3] << 24;
 	}
 	
-	public static List<byte[]> decodeBA(final byte[] ba) {
-		final List<byte[]> result = new ArrayList<>();
+	public static List<List> decodeBA(final byte[] ba) {
+		final List<List> result = new ArrayList<>();
 		final int nrOfBas = ba[0];
 		int i = 1;
 		for (int j = 0; j < nrOfBas; j++) {
+			final List l = new ArrayList();
+			result.add(l);
+			final int nameSize = ba[i];
+			i++;
+			final byte[] nameBa = new byte[nameSize];
+			System.arraycopy(ba, i, nameBa, 0, nameSize);
+			l.add(new String(nameBa, StandardCharsets.UTF_8));
+			i += nameSize;
 			final int size = decodeBaSize(ba, i);
 			final byte[] subBa = new byte[size];
 			i += 4;
 			System.arraycopy(ba, i, subBa, 0, size);
 			i += size;
-			result.add(subBa);
+			l.add(subBa);
 		}
 		return result;
 	}
 
-	public static void main(final String[] args) {
-//		final List<byte[]> data = Arrays.asList(new byte[] {1});
-//		final List<byte[]> dData = decodeBA(encodeBA(Arrays.asList(new byte[] {1})));
-//		System.out.println(dData);
+	public static void main(final String[] args) throws UnsupportedEncodingException {
+		final List<List> data = Arrays.asList(Arrays.asList("AName", new byte[] {1}));
+		final List<List> dData = decodeBA(encodeBA(data));
+		System.out.println(dData);
 	}
 	
 }
