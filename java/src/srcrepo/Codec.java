@@ -34,15 +34,16 @@ public class Codec {
 		return ba;
 	}
 
-	public static void encodeBaSize(final int size, final int i, final byte[] ba) {
+	public static byte[] encodeBaSize(final int size, final int i, final byte[] ba) {
 		ba[i] = (byte) (size & 255);
 		ba[i + 1] = (byte) ((size >> 8) & 255);
 		ba[i + 2] = (byte) ((size >> 16) & 255);
 		ba[i + 3] = (byte) ((size >> 24) & 255);
+		return ba;
 	}
 	
-	private static int decodeBaSize(final byte[] ba, final int i) {
-		return ba[i] | ba[i + 1] << 8 | ba[i + 2] << 16 | ba[i + 3] << 24;
+	public static int decodeBaSize(final byte[] ba, final int i) {
+		return ba[i] & 255 | (ba[i + 1] & 255) << 8 | (ba[i + 2] & 255) << 16 | (ba[i + 3] & 255) << 24;
 	}
 	
 	public static List<List> decodeBA(final byte[] ba) {
@@ -69,9 +70,11 @@ public class Codec {
 	}
 
 	public static void main(final String[] args) throws UnsupportedEncodingException {
-		final List<List> data = Arrays.asList(Arrays.asList("AName", new byte[] {1}));
-		final List<List> dData = decodeBA(encodeBA(data));
-		System.out.println(dData);
+		byte[] ba = new byte[] {-1, -1, 0, 0};
+		System.out.println(decodeBaSize(ba, 0));
+//		final List<List> data = Arrays.asList(Arrays.asList("AName", new byte[] {1}));
+//		final List<List> dData = decodeBA(encodeBA(data));
+//		System.out.println(dData);
 	}
 	
 }

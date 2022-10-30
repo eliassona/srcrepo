@@ -19,3 +19,9 @@
     
     )
   )
+
+(deftest test-encode-size
+  (let [ba (byte-array 4)
+        v 65535]
+    (is (= v (Codec/decodeBaSize (Codec/encodeBaSize v 0 ba) 0)))
+    ))
