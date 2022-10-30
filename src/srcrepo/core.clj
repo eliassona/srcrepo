@@ -1,6 +1,6 @@
 (ns srcrepo.core
   (:import [java.security MessageDigest]
-           [java.io FileInputStream File]
+           [java.io FileInputStream FileOutputStream File]
            [redis.clients.jedis Jedis]
            [srcrepo Codec]))
 
@@ -73,13 +73,20 @@
         src-files (filter (fn [[_ ba]] ba) src-files)]
     (dbg (count (first src-files)))
     (doseq [[rel-src-dir bin-files] src-files]
-      (dbg (Codec/decodeBA bin-files))
-      #_(let [bin-dir (File. bin-root-dir rel-src-dir)]
-         (doseq [bin-file (Codec/decodeBA bin-files)]
-           (let [[bin-name ba] bin-file]
-             (dbg bin-name)
-             )
-           )
+      ;(dbg rel-src-dir)
+      ;(dbg (Codec/decodeBA bin-files))
+      (let [bin-dir (File. bin-root-dir rel-src-dir)]
+        (doseq [bin-file (Codec/decodeBA bin-files)]
+          (let [[bin-name ba] bin-file
+                f (File. bin-dir bin-name)
+                out (FileOutputStream. f)]
+            (try 
+              (.write out ba)
+              (.flush out)
+              (finally
+                (.close out)))
+            )
+          )
       ))
     #_(map #(.get jedis %) sha-256s)
     )

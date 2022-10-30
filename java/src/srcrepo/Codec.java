@@ -3,7 +3,6 @@ package srcrepo;
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 public class Codec {
@@ -48,7 +47,7 @@ public class Codec {
 	
 	public static List<List> decodeBA(final byte[] ba) {
 		final List<List> result = new ArrayList<>();
-		final int nrOfBas = ba[0];
+		final int nrOfBas = ba[0] & 255;
 		int i = 1;
 		for (int j = 0; j < nrOfBas; j++) {
 			final List l = new ArrayList();
