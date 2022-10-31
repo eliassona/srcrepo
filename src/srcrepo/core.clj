@@ -71,11 +71,9 @@
   (let [src-files 
         (map (fn [f] [(remove-name (relative-path-of src-dir f)) (.get jedis (file->sha-256 f))]) (files-of src-dir src-ext))
         src-files (filter (fn [[_ ba]] ba) src-files)]
-    (dbg (count (first src-files)))
     (doseq [[rel-src-dir bin-files] src-files]
-      ;(dbg rel-src-dir)
-      ;(dbg (Codec/decodeBA bin-files))
       (let [bin-dir (File. bin-root-dir rel-src-dir)]
+        (.mkdirs bin-dir)
         (doseq [bin-file (Codec/decodeBA bin-files)]
           (let [[bin-name ba] bin-file
                 f (File. bin-dir bin-name)
@@ -84,13 +82,7 @@
               (.write out ba)
               (.flush out)
               (finally
-                (.close out)))
-            )
-          )
-      ))
-    #_(map #(.get jedis %) sha-256s)
-    )
-  )
+                (.close out)))))))))
 
 
 
@@ -102,12 +94,19 @@
    [[(File. "/Users/anderseliasson/src/mz8/mz-main/mediationzone/packages/ultra/src/server/java") "java"]
     [(File. "/Users/anderseliasson/src/mz8/mz-main/mediationzone/packages/ultra/build/classes/java/server") "class"]]
    [[(File. "/Users/anderseliasson/src/mz8/mz-main/mediationzone/packages/ultra/src/testsupport/java") "java"]
-    [(File. "/Users/anderseliasson/src/mz8/mz-main/mediationzone/packages/ultra/build/classes/java/testsupport") "class"]]])
+    [(File. "/Users/anderseliasson/src/mz8/mz-main/mediationzone/packages/ultra/build/classes/java/testsupport") "class"]]
+   #_[[(File. "/Users/anderseliasson/src/mz8/mz-main/mediationzone/packages/ultra/src/ui/java") "java"]
+     [(File. "/Users/anderseliasson/src/mz8/mz-main/mediationzone/packages/ultra/build/classes/java/ui") "class"]]])
   
+(defn add! [] 
+  (doseq [[src bin] ultra-project]
+    (add-dir-to-redis! src bin))
+  (println (str (count (.keys jedis "*")) " object created in redis")))
 
-  (defn add! [] 
-    (doseq [[src bin] ultra-project]
-      (add-dir-to-redis! src bin)))
+
+(defn init! []
+  (doseq [[src [bin-dir]] ultra-project]
+    (init-bin! src bin-dir)))
 
 (def a-ba  
   (byte-array
